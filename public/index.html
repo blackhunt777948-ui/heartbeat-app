@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kalp Atışı Bağlantısı ❤️</title>
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent; /* موبائل پر کلک کرنے پر بلیو لیئر ختم کرنے کے لیے */
+    }
+
+    body {
+      background: #0f172a;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      color: #f43f5e;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #94a3b8;
+      margin-bottom: 30px;
+      font-size: 1rem;
+    }
+
+    button {
+      background: #e11d48;
+      color: white;
+      border: none;
+      padding: 20px 35px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(225, 29, 72, 0.4);
+      transition: transform 0.1s ease, background 0.2s ease;
+      outline: none; /* آؤٹ لائن ختم کرنے کے لیے */
+      user-select: none;
+    }
+
+    button:active {
+      transform: scale(0.95);
+      background: #be123c;
+      outline: none;
+    }
+
+    button:focus {
+      outline: none;
+    }
+
+    #status {
+      margin-top: 25px;
+      color: #38bdf8;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>❤️ Kalp Atışı Bağlantısı ❤️</h1>
+  <p>Butona dokun ve ona sevgini hissettir!</p>
+
+  <button onclick="sendVibrationSignal()">Kalp Sinyali Gönder 💓</button>
+  <div id="status">Bağlantı kontrol ediliyor...</div>
+
+  <script>
+    const publicVapidKey = 'YOUR_PUBLIC_VAPID_KEY'; // اپنی پبلک ویپڈ کی یہاں لکھیں
+
+    async function registerServiceWorker() {
+      if ('serviceWorker' in navigator) {
+        try {
+          const register = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/'
+          });
+          
+          const subscription = await register.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: publicVapidKey
+          });
+
+          await fetch('/subscribe', {
+            method: 'POST',
+            body: JSON.stringify(subscription),
+            headers: { 'content-type': 'application/json' }
+          });
+
+          document.getElementById('status').innerText = 'Bağlantı hazır! Şimdi sinyal gönderebilirsin. ✨';
+        } catch (err) {
+          console.error('Kayıt hatası:', err);
+          document.getElementById('status').innerText = 'Bildirim izni gerekli veya hata oluştu!';
+        }
+      }
+    }
+
+    registerServiceWorker();
+
+    async function sendVibrationSignal() {
+      try {
+        const response = await fetch('/send-vibration', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' }
+        });
+        if(response.ok) {
+          alert('Kalp sinyali başarıyla gönderildi! 💖');
+        } else {
+          alert('Sinyal gönderilemedi, lütfen izinleri kontrol edin.');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  </script>
+</body>
+</html>
