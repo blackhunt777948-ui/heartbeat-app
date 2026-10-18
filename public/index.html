@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kalp Atışı Bağlantısı ❤️</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #0f172a;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      color: #f43f5e;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #94a3b8;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+    }
+
+    .pin-box {
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 15px;
+      margin-bottom: 25px;
+      border: 1px solid #334155;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .pin-box label {
+      display: block;
+      font-size: 0.85rem;
+      color: #38bdf8;
+      margin-bottom: 8px;
+    }
+
+    .pin-box input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #fff;
+      text-align: center;
+      font-size: 1.1rem;
+      letter-spacing: 2px;
+      outline: none;
+    }
+
+    button {
+      background: #e11d48;
+      color: white;
+      border: none;
+      padding: 18px 35px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(225, 29, 72, 0.4);
+      transition: transform 0.1s ease, background 0.2s ease;
+      outline: none;
+      user-select: none;
+    }
+
+    button:active {
+      transform: scale(0.95);
+      background: #be123c;
+    }
+
+    #status {
+      margin-top: 25px;
+      color: #38bdf8;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>❤️ Kalp Atışı Bağlantısı ❤️</h1>
+  <p>Özel PIN kodunuzu girin ve sinyal gönderin!</p>
+
+  <div class="pin-box">
+    <label for="pinInput">Gizli PIN Kodu (Secret PIN):</label>
+    <input type="password" id="pinInput" placeholder="Örn: 2026" onchange="savePin()" />
+  </div>
+
+  <button id="loveBtn" onclick="sendSignal()">Kalp Sinyali Gönder 💓</button>
+  <div id="status">PIN kodunu girin...</div>
+
+  <script>
+    // LocalStorage mein PIN Save karna
+    const pinInput = document.getElementById('pinInput');
+    const statusText = document.getElementById('status');
+
+    // App khulte hi purana PIN load karna
+    const savedPin = localStorage.getItem('pair_pin');
+    if (savedPin) {
+      pinInput.value = savedPin;
+      statusText.innerText = "Cihaz Bağlandı! (PIN: " + savedPin + ")";
+    }
+
+    function savePin() {
+      const pin = pinInput.value.trim();
+      if (pin) {
+        localStorage.setItem('pair_pin', pin);
+        statusText.innerText = "PIN Kaydedildi! (PIN: " + pin + ")";
+      }
+    }
+
+    // Service Worker Register
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('SW Registered'))
+        .catch(err => console.error(err));
+    }
+
+    function sendSignal() {
+      const currentPin = pinInput.value.trim();
+
+      if (!currentPin) {
+        alert("Lütfen önce bir PIN kodu girin! (Pehle PIN enter karein)");
+        return;
+      }
+
+      // Local Vibration Test
+      if ('vibrate' in navigator) {
+        navigator.vibrate([500, 200, 500, 200, 1000]);
+      }
+
+      // Broadcast Message (Same PIN Devices ke liye)
+      const channel = new BroadcastChannel('love_channel_' + currentPin);
+      channel.postMessage({
+        type: 'LOVE_SIGNAL',
+        pin: currentPin,
+        time: Date.now()
+      });
+
+      alert("Kalp sinyali gönderildi! 💖");
+    }
+
+    // Direct Signal receive karne ke liye listener
+    function listenForSignals() {
+      const currentPin = localStorage.getItem('pair_pin');
+      if (currentPin) {
+        const channel = new BroadcastChannel('love_channel_' + currentPin);
+        channel.onmessage = (event) => {
+          if (event.data && event.data.type === 'LOVE_SIGNAL') {
+            // Mobile Vibration Pattern
+            if ('vibrate' in navigator) {
+              navigator.vibrate([500, 200, 500, 200, 1000]);
+            }
+            
+            // Notification Show karna
+            if (Notification.permission === 'granted') {
+              navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification('❤️ Kalp Sinyali Geldi!', {
+                  body: 'Seni düşündü ve kalp gönderdi!',
+                  vibrate: [500, 200, 500, 200, 1000],
+                  tag: 'love-signal',
+                  renotify: true
+                });
+              });
+            }
+          }
+        };
+      }
+    }
+
+    // Notification Permission
+    if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+
+    listenForSignals();
+  </script>
+</body>
+</html>
