@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kalp Atışı Bağlantısı ❤️</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #0f172a;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      color: #f43f5e;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #94a3b8;
+      margin-bottom: 25px;
+      font-size: 0.95rem;
+    }
+
+    .pin-container {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 16px;
+      margin-bottom: 25px;
+      border: 1px solid #334155;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .pin-container label {
+      display: block;
+      font-size: 0.85rem;
+      color: #38bdf8;
+      margin-bottom: 8px;
+    }
+
+    .pin-container input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #fff;
+      text-align: center;
+      font-size: 1.2rem;
+      letter-spacing: 3px;
+      outline: none;
+    }
+
+    .heart-btn {
+      background: #e11d48;
+      color: white;
+      border: none;
+      width: 140px;
+      height: 140px;
+      font-size: 3.5rem;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(225, 29, 72, 0.5);
+      transition: transform 0.1s ease, background 0.2s ease;
+      outline: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+    }
+
+    .heart-btn:active {
+      transform: scale(0.9);
+      background: #be123c;
+    }
+
+    #status {
+      margin-top: 25px;
+      color: #38bdf8;
+      font-size: 0.9rem;
+    }
+  </style>
+
+  <!-- Firebase Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+</head>
+<body>
+
+  <h1>❤️ Kalp Atışı Bağlantısı ❤️</h1>
+  <p>Butona dokun, kalbin aynı anda atsın!</p>
+
+  <div class="pin-container" id="pinBox">
+    <label for="pinInput">Gizli PIN Kodu (İlk ve Son Kez):</label>
+    <input type="password" id="pinInput" placeholder="Örn: 7779" />
+    <button onclick="lockPin()" style="margin-top: 15px; padding: 10px 20px; font-size: 0.9rem; border-radius: 8px; background: #38bdf8; color: #0f172a; border: none; cursor: pointer; font-weight: bold;">Kaydet & Başla</button>
+  </div>
+
+  <div id="appInterface" style="display: none;">
+    <button class="heart-btn" onclick="sendRealtimeSignal()">❤️</button>
+    <div id="status">Sistem hazır! Dokun ve hissettir...</div>
+  </div>
+
+  <script>
+    // Firebase Config (آپ کی اپنی کیز)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAq9YcI7elloPxpARxpq1nIi4", // آپ کی برائوزر سے حاصل کردہ API key
+      authDomain: "kalp-atisi-31908.firebaseapp.com",
+      projectId: "kalp-atisi-31908",
+      storageBucket: "kalp-atisi-31908.appspot.com",
+      messagingSenderId: "528037346484",
+      appId: "1:528037346484:web:3ac7608dc689",
+      measurementId: "G-8BQ0JXQTKN"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    const pinBox = document.getElementById('pinBox');
+    const appInterface = document.getElementById('appInterface');
+    const pinInput = document.getElementById('pinInput');
+    const statusText = document.getElementById('status');
+
+    let currentPin = localStorage.getItem('saved_love_pin');
+    let channel;
+
+    if (currentPin) {
+      pinBox.style.display = 'none';
+      appInterface.style.display = 'block';
+      initConnection(currentPin);
+    }
+
+    function lockPin() {
+      const pin = pinInput.value.trim();
+      if (pin.length < 3) {
+        alert("Lütfen geçerli bir PIN girin!");
+        return;
+      }
+      localStorage.setItem('saved_love_pin', pin);
+      currentPin = pin;
+      pinBox.style.display = 'none';
+      appInterface.style.display = 'block';
+      initConnection(currentPin);
+    }
+
+    function initConnection(pin) {
+      // 1. Broadcast Channel (اگر ایپ کھلی ہو تو فورا وائبریٹ کرے)
+      channel = new BroadcastChannel('realtime_heartbeat_' + pin);
+      channel.onmessage = (event) => {
+        if (event.data && event.data.type === 'VIBRATE_NOW') {
+          triggerVibration();
+        }
+      };
+
+      // 2. Service Worker & Notification Permission (اگر ایپ/کروم بند ہو)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('firebase-messaging-sw.js')
+          .then((registration) => {
+            console.log('Service Worker Registered');
+            if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+              Notification.requestPermission();
+            }
+          });
+      }
+    }
+
+    function sendRealtimeSignal() {
+      if (!currentPin) return;
+
+      // اپنے فون کو وائبریٹ کریں
+      triggerVibration();
+
+      // سگنل آگے بھیجیں
+      if (channel) {
+        channel.postMessage({
+          type: 'VIBRATE_NOW',
+          time: Date.now()
+        });
+      }
+    }
+
+    function triggerVibration() {
+      if ('vibrate' in navigator) {
+        navigator.vibrate([400, 150, 400, 150, 800]);
+      }
+    }
+  </script>
+</body>
+</html>
