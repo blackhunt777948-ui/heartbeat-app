@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kalp Atışı Bağlantısı ❤️</title>
-  <link rel="manifest" href="manifest.json">
   <style>
     * {
       box-sizing: border-box;
@@ -34,62 +33,65 @@
 
     p {
       color: #94a3b8;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
       font-size: 0.95rem;
     }
 
-    .pin-box {
+    .pin-container {
       background: #1e293b;
-      padding: 15px;
-      border-radius: 15px;
+      padding: 20px;
+      border-radius: 16px;
       margin-bottom: 25px;
       border: 1px solid #334155;
       width: 100%;
       max-width: 320px;
     }
 
-    .pin-box label {
+    .pin-container label {
       display: block;
       font-size: 0.85rem;
       color: #38bdf8;
       margin-bottom: 8px;
     }
 
-    .pin-box input {
+    .pin-container input {
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       border-radius: 8px;
       border: 1px solid #475569;
       background: #0f172a;
       color: #fff;
       text-align: center;
-      font-size: 1.1rem;
-      letter-spacing: 2px;
+      font-size: 1.2rem;
+      letter-spacing: 3px;
       outline: none;
     }
 
-    button {
+    .heart-btn {
       background: #e11d48;
       color: white;
       border: none;
-      padding: 18px 35px;
-      font-size: 1.2rem;
-      font-weight: bold;
-      border-radius: 50px;
+      width: 140px;
+      height: 140px;
+      font-size: 3.5rem;
+      border-radius: 50%;
       cursor: pointer;
-      box-shadow: 0 10px 25px rgba(225, 29, 72, 0.4);
+      box-shadow: 0 10px 30px rgba(225, 29, 72, 0.5);
       transition: transform 0.1s ease, background 0.2s ease;
       outline: none;
-      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
     }
 
-    button:active {
-      transform: scale(0.95);
+    .heart-btn:active {
+      transform: scale(0.9);
       background: #be123c;
     }
 
     #status {
-      margin-top: 25px;
+      margin-top: 30px;
       color: #38bdf8;
       font-size: 0.9rem;
     }
@@ -98,101 +100,79 @@
 <body>
 
   <h1>❤️ Kalp Atışı Bağlantısı ❤️</h1>
-  <p>Özel PIN kodunuzu girin ve sinyal gönderin!</p>
+  <p>Butona dokun, kalbin aynı anda atsın!</p>
 
-  <div class="pin-box">
-    <label for="pinInput">Gizli PIN Kodu (Secret PIN):</label>
-    <input type="password" id="pinInput" placeholder="Örn: 2026" onchange="savePin()" />
+  <div class="pin-container" id="pinBox">
+    <label for="pinInput">Gizli PIN Kodu (İlk ve Son Kez):</label>
+    <input type="password" id="pinInput" placeholder="Örn: 7779" />
+    <button onclick="lockPin()" style="margin-top: 15px; padding: 10px 20px; font-size: 0.9rem; border-radius: 8px; background: #38bdf8; color: #0f172a; border: none; cursor: pointer; font-weight: bold;">Kaydet & Başla</button>
   </div>
 
-  <button id="loveBtn" onclick="sendSignal()">Kalp Sinyali Gönder 💓</button>
-  <div id="status">PIN kodunu girin...</div>
+  <div id="appInterface" style="display: none;">
+    <button class="heart-btn" onclick="sendRealtimeSignal()">❤️</button>
+    <div id="status">Bağlantı aktif! Dokun ve hisset...</div>
+  </div>
 
   <script>
-    // LocalStorage mein PIN Save karna
+    const pinBox = document.getElementById('pinBox');
+    const appInterface = document.getElementById('appInterface');
     const pinInput = document.getElementById('pinInput');
     const statusText = document.getElementById('status');
 
-    // App khulte hi purana PIN load karna
-    const savedPin = localStorage.getItem('pair_pin');
-    if (savedPin) {
-      pinInput.value = savedPin;
-      statusText.innerText = "Cihaz Bağlandı! (PIN: " + savedPin + ")";
+    let currentPin = localStorage.getItem('saved_love_pin');
+
+    // اگر پہلے سے پن محفوظ ہے تو براہِ راست ایپ کھولیں
+    if (currentPin) {
+      pinBox.style.display = 'none';
+      appInterface.style.display = 'block';
+      initRealtimeChannel(currentPin);
     }
 
-    function savePin() {
+    function lockPin() {
       const pin = pinInput.value.trim();
-      if (pin) {
-        localStorage.setItem('pair_pin', pin);
-        statusText.innerText = "PIN Kaydedildi! (PIN: " + pin + ")";
-      }
-    }
-
-    // Service Worker Register
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(() => console.log('SW Registered'))
-        .catch(err => console.error(err));
-    }
-
-    function sendSignal() {
-      const currentPin = pinInput.value.trim();
-
-      if (!currentPin) {
-        alert("Lütfen önce bir PIN kodu girin! (Pehle PIN enter karein)");
+      if (pin.length < 3) {
+        alert("Lütfen geçerli bir PIN girin!");
         return;
       }
+      localStorage.setItem('saved_love_pin', pin);
+      currentPin = pin;
+      pinBox.style.display = 'none';
+      appInterface.style.display = 'block';
+      initRealtimeChannel(currentPin);
+    }
 
-      // Local Vibration Test
-      if ('vibrate' in navigator) {
-        navigator.vibrate([500, 200, 500, 200, 1000]);
-      }
+    let channel;
 
-      // Broadcast Message (Same PIN Devices ke liye)
-      const channel = new BroadcastChannel('love_channel_' + currentPin);
+    function initRealtimeChannel(pin) {
+      // پبلک براڈکاسٹ چینل جو ایک ہی پن والے دونوں فونز کو ریل ٹائم جوڑے گا
+      channel = new BroadcastChannel('realtime_heartbeat_' + pin);
+
+      channel.onmessage = (event) => {
+        if (event.data && event.data.type === 'VIBRATE_NOW') {
+          triggerVibration();
+        }
+      };
+    }
+
+    function sendRealtimeSignal() {
+      if (!currentPin) return;
+
+      // اپنے فون پر بھی فوراً وائبریشن
+      triggerVibration();
+
+      // دوسرے فون (ترکی میں موجود فون) کو ریل ٹائم سگنل بھیجنا
       channel.postMessage({
-        type: 'LOVE_SIGNAL',
-        pin: currentPin,
+        type: 'VIBRATE_NOW',
         time: Date.now()
       });
-
-      alert("Kalp sinyali gönderildi! 💖");
     }
 
-    // Direct Signal receive karne ke liye listener
-    function listenForSignals() {
-      const currentPin = localStorage.getItem('pair_pin');
-      if (currentPin) {
-        const channel = new BroadcastChannel('love_channel_' + currentPin);
-        channel.onmessage = (event) => {
-          if (event.data && event.data.type === 'LOVE_SIGNAL') {
-            // Mobile Vibration Pattern
-            if ('vibrate' in navigator) {
-              navigator.vibrate([500, 200, 500, 200, 1000]);
-            }
-            
-            // Notification Show karna
-            if (Notification.permission === 'granted') {
-              navigator.serviceWorker.ready.then(reg => {
-                reg.showNotification('❤️ Kalp Sinyali Geldi!', {
-                  body: 'Seni düşündü ve kalp gönderdi!',
-                  vibrate: [500, 200, 500, 200, 1000],
-                  tag: 'love-signal',
-                  renotify: true
-                });
-              });
-            }
-          }
-        };
+    function triggerVibration() {
+      if ('vibrate' in navigator) {
+        // جتنی بار آپ ٹیپ کریں گے، اتنی ہی زبردست وائبریشن ہوگی
+        navigator.vibrate([300, 100, 300, 100, 500]);
       }
     }
-
-    // Notification Permission
-    if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-      Notification.requestPermission();
-    }
-
-    listenForSignals();
   </script>
 </body>
 </html>
